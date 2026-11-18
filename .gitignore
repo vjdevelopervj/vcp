@@ -1,0 +1,14 @@
+# Environment variables (JANGAN PERNAH COMMIT FILE .env)
+.env
+.env.backup
+.env.local
+
+# User uploads
+/uploads/
+!/uploads/.gitkeep
+
+# System & test folders
+.chrome-test/
+*.log
+.DS_Store
+Thumbs.db

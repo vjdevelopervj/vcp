@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1536" height="1024" viewBox="0 0 1536 1024" fill="none" role="img" aria-labelledby="title description">
+  <title id="title">Dokumen Markdown 3D</title>
+  <desc id="description">Tumpukan dokumen grafit dengan tepi lime, sudut terlipat, heading Markdown, checklist, dan blok kode.</desc>
+  <defs>
+    <linearGradient id="background" x1="220" y1="950" x2="1390" y2="70" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B0B12"/>
+      <stop offset=".65" stop-color="#0D100E"/>
+      <stop offset="1" stop-color="#161D10"/>
+    </linearGradient>
+    <linearGradient id="rear" x1="15" y1="0" x2="530" y2="700" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E7FF89" stop-opacity=".8"/>
+      <stop offset=".32" stop-color="#91DB04" stop-opacity=".35"/>
+      <stop offset=".68" stop-color="#244C0D" stop-opacity=".65"/>
+      <stop offset="1" stop-color="#B8F322" stop-opacity=".8"/>
+    </linearGradient>
+    <linearGradient id="middle" x1="0" y1="0" x2="560" y2="650" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E6FF9E"/>
+      <stop offset=".18" stop-color="#B7F226"/>
+      <stop offset=".65" stop-color="#4E8C0F"/>
+      <stop offset="1" stop-color="#91D806"/>
+    </linearGradient>
+    <linearGradient id="face" x1="15" y1="0" x2="525" y2="700" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3C4335"/>
+      <stop offset=".28" stop-color="#232920"/>
+      <stop offset=".62" stop-color="#171C17"/>
+      <stop offset="1" stop-color="#111611"/>
+    </linearGradient>
+    <linearGradient id="edge" x1="0" y1="150" x2="560" y2="650" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E0FE84"/>
+      <stop offset=".36" stop-color="#85C821"/>
+      <stop offset=".7" stop-color="#23480D"/>
+      <stop offset="1" stop-color="#AFF40A"/>
+    </linearGradient>
+    <linearGradient id="bevel" x1="18" y1="0" x2="548" y2="680" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ECFFC2"/>
+      <stop offset=".4" stop-color="#A1F102"/>
+      <stop offset=".67" stop-color="#5A831E"/>
+      <stop offset="1" stop-color="#B5F929"/>
+    </linearGradient>
+    <linearGradient id="fold" x1="437" y1="0" x2="554" y2="125" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#45680D"/>
+      <stop offset=".4" stop-color="#A1F102"/>
+      <stop offset=".78" stop-color="#E5FF93"/>
+      <stop offset="1" stop-color="#78B913"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="30" y1="0" x2="530" y2="580" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F4FFD9" stop-opacity=".09"/>
+      <stop offset=".46" stop-color="#F4FFD9" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="badge" x1="0" y1="0" x2="140" y2="65" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D4FA55"/>
+      <stop offset="1" stop-color="#A1F102"/>
+    </linearGradient>
+    <filter id="groundShadow" x="-50%" y="-150%" width="200%" height="400%">
+      <feGaussianBlur stdDeviation="32"/>
+    </filter>
+    <filter id="sheetShadow" x="-40%" y="-25%" width="190%" height="180%">
+      <feDropShadow dx="5" dy="26" stdDeviation="21" flood-color="#000" flood-opacity=".65"/>
+    </filter>
+    <path id="sheet" d="M28 0H430L560 130V672Q560 700 532 700H28Q0 700 0 672V28Q0 0 28 0Z"/>
+  </defs>
+  <path fill="url(#background)" d="M0 0H1536V1024H0Z"/>
+  <ellipse cx="860" cy="870" rx="390" ry="50" transform="rotate(11 860 870)" fill="#000" opacity=".8" filter="url(#groundShadow)"/>
+  <g transform="matrix(.98 .22 -.30 .90 700 80)">
+    <g transform="translate(-126 113)" filter="url(#sheetShadow)">
+      <use href="#sheet" transform="translate(0 13)" fill="#315911" stroke="#578A1A" stroke-width="2"/>
+      <use href="#sheet" fill="url(#rear)" stroke="#B6EF60" stroke-opacity=".8" stroke-width="3"/>
+      <path d="M27 17H420M15 33V669Q15 684 30 684H522" stroke="#E8FFC6" stroke-opacity=".5" stroke-width="2" stroke-linecap="round"/>
+      <path d="M37 140H290M37 175H214M37 246H270M37 278H243" stroke="#DBFBAE" stroke-opacity=".2" stroke-width="8" stroke-linecap="round"/>
+    </g>
+    <g transform="translate(-62 56)" filter="url(#sheetShadow)">
+      <use href="#sheet" transform="translate(0 16)" fill="#3E7311" stroke="#82BF26" stroke-width="2"/>
+      <use href="#sheet" fill="url(#middle)" stroke="#D5FC83" stroke-width="3"/>
+      <path d="M28 15H424M15 29V671Q15 685 29 685H529" stroke="#F0FFD0" stroke-opacity=".7" stroke-width="2" stroke-linecap="round"/>
+      <path d="M35 159H293M35 195H240M35 267H260" stroke="#264808" stroke-opacity=".3" stroke-width="9" stroke-linecap="round"/>
+    </g>
+    <g filter="url(#sheetShadow)">
+      <use href="#sheet" transform="translate(0 18)" fill="url(#edge)" stroke="#7EB135" stroke-width="2"/>
+      <use href="#sheet" fill="url(#face)" stroke="url(#bevel)" stroke-width="4"/>
+      <use href="#sheet" fill="url(#shine)"/>
+      <path d="M28 9H428M9 28V672Q9 691 29 691H530" stroke="#E4F7CD" stroke-opacity=".3" stroke-width="2" stroke-linecap="round"/>
+      <path d="M430 3V100Q430 130 460 130H557" fill="url(#fold)" stroke="#D7FA8A" stroke-width="2"/>
+      <path d="M430 9V102Q430 132 460 132H552" stroke="#060B04" stroke-opacity=".65" stroke-width="8"/>
+      <path d="M432 3V99Q432 128 461 128H555" stroke="#EAFFA6" stroke-opacity=".9" stroke-width="2"/>
+      <g transform="translate(44 42)">
+        <rect width="134" height="60" rx="14" fill="#050805" transform="translate(0 5)"/>
+        <rect width="134" height="60" rx="14" fill="url(#badge)"/>
+        <rect x="1" y="1" width="132" height="58" rx="13" stroke="#ECFFB1" stroke-opacity=".7" stroke-width="2"/>
+        <text x="67" y="42" fill="#15200A" font-family="Consolas, 'Courier New', monospace" font-size="40" font-weight="700" text-anchor="middle">.md</text>
+      </g>
+      <circle cx="207" cy="72" r="5" fill="#E5F3D7" opacity=".55"/>
+      <circle cx="227" cy="72" r="5" fill="#E5F3D7" opacity=".25"/>
+      <circle cx="247" cy="72" r="5" fill="#E5F3D7" opacity=".15"/>
+      <text x="43" y="211" fill="#A1F102" font-family="Consolas, 'Courier New', monospace" font-size="64" font-weight="700">#</text>
+      <text x="99" y="207" fill="#F4F5FA" font-family="Arial, Helvetica, sans-serif" font-size="51" font-weight="700" letter-spacing="-1.5">Markdown</text>
+      <path d="M47 245H452" stroke="#C4D0BC" stroke-opacity=".65" stroke-width="9" stroke-linecap="round"/>
+      <path d="M47 269H371" stroke="#A0AE98" stroke-opacity=".4" stroke-width="9" stroke-linecap="round"/>
+      <path d="M44 305H514" stroke="#E1F0D5" stroke-opacity=".13" stroke-width="2"/>
+      <rect x="44" y="336" width="29" height="29" rx="7" fill="#A1F102"/>
+      <path d="m51 350 6 6 11-14" stroke="#1C2B0A" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M94 350H411" stroke="#F4F5FA" stroke-opacity=".8" stroke-width="10" stroke-linecap="round"/>
+      <rect x="44" y="391" width="29" height="29" rx="7" stroke="#A1F102" stroke-width="3"/>
+      <path d="M94 405H352" stroke="#D1DDC8" stroke-opacity=".6" stroke-width="10" stroke-linecap="round"/>
+      <rect x="43" y="457" width="473" height="161" rx="19" fill="#080D0A" stroke="#71895C" stroke-opacity=".5" stroke-width="2"/>
+      <path d="M64 457H494" stroke="#B5F365" stroke-opacity=".55" stroke-width="2" stroke-linecap="round"/>
+      <path d="M62 483H89M62 591H89" stroke="#A1F102" stroke-width="5" stroke-linecap="round" stroke-dasharray="2 9"/>
+      <path d="M72 516H135" stroke="#A1F102" stroke-width="8" stroke-linecap="round"/>
+      <path d="M155 516H296" stroke="#DCE8D2" stroke-opacity=".75" stroke-width="8" stroke-linecap="round"/>
+      <path d="M94 546H207" stroke="#F4F5FA" stroke-opacity=".5" stroke-width="8" stroke-linecap="round"/>
+      <path d="M227 546H348" stroke="#A1F102" stroke-opacity=".65" stroke-width="8" stroke-linecap="round"/>
+      <path d="M94 572H159" stroke="#F4F5FA" stroke-opacity=".35" stroke-width="8" stroke-linecap="round"/>
+      <path d="M179 572H271" stroke="#F4F5FA" stroke-opacity=".65" stroke-width="8" stroke-linecap="round"/>
+      <path d="M45 654H159" stroke="#D4E5C6" stroke-opacity=".3" stroke-width="6" stroke-linecap="round"/>
+      <path d="M463 654H513" stroke="#A1F102" stroke-opacity=".8" stroke-width="6" stroke-linecap="round"/>
+    </g>
+  </g>
+</svg>

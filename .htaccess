@@ -1,0 +1,29 @@
+# Pertahanan level web server untuk vcp.
+# Tanpa Options -Indexes, Apache menampilkan daftar isi setiap folder: /uploads/
+# berisi lampiran SEMUA akun dan /includes/ membocorkan struktur source.
+Options -Indexes
+
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "same-origin"
+    Header always set Content-Security-Policy "frame-ancestors 'self'"
+</IfModule>
+
+# Folder dan file tersembunyi: .chrome-test (profil browser), .env, dsb.
+# FilesMatch hanya melihat nama file, jadi folder berawalan titik butuh RewriteRule.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule "(^|/)\." - [F]
+</IfModule>
+
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+# Artefak kerja yang tidak sengaja nyangkut di docroot (log server, dump schema,
+# template .md, backup). Lampiran user disimpan sebagai .webp/.txt/.pdf/.docx,
+# jadi pola ini tidak pernah memblokir file yang memang dipakai user.
+<FilesMatch "\.(log|sql|ini|bak|old|md|sh|zip|gz)$">
+    Require all denied
+</FilesMatch>
