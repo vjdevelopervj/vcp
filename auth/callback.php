@@ -10,9 +10,11 @@ function oauth_fail(string $message): never
 $pending = $_SESSION['oauth'] ?? null;
 unset($_SESSION['oauth']);
 
-if (!is_array($pending) || ($pending['provider'] ?? '') !== ($_GET['provider'] ?? '')) {
+$reqProvider = (string) ($_GET['provider'] ?? '');
+if (!is_array($pending) || ($reqProvider !== '' && ($pending['provider'] ?? '') !== $reqProvider)) {
     oauth_fail('Permintaan login sudah tidak berlaku, silakan mulai lagi dari halaman sign in.');
 }
+$provider = (string) ($pending['provider'] ?? $reqProvider);
 if (!hash_equals((string) $pending['state'], (string) ($_GET['state'] ?? ''))) {
     oauth_fail('Verifikasi state gagal (kemungkinan permintaan tidak berasal dari browser ini).');
 }

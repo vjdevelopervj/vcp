@@ -291,67 +291,62 @@ function ai_generate(array $document, array $history, string $userMessage, array
  */
 function ai_complete(array $messages): string
 {
+    $host = trim(explode(',', (string) ($_SERVER['HTTP_X_FORWARDED_HOST'] ?? $_SERVER['HTTP_HOST'] ?? ''))[0]);
+    $isLocal = empty($host) || in_array($host, ['localhost', '127.0.0.1', 'vcp.test'], true) || str_ends_with($host, '.test');
+
+    // Di shared hosting gratis (seperti InfinityFree), batas waktu eksekusi PHP dibatasi ketat 20 detik oleh server.
+    // Batasi timeout cURL ke 15 detik dan token ke 3000 agar respons selesai sebelum server memutus koneksi paksa.
+    $effectiveTimeout = $isLocal ? AI_TIMEOUT : min(AI_TIMEOUT, 15);
+    $effectiveTokens = $isLocal ? AI_MAX_TOKENS : min(AI_MAX_TOKENS, 3000);
+
     $payload = [
         'model' => AI_MODEL,
         'messages' => $messages,
         'temperature' => 0.4,
-        'max_tokens' => AI_MAX_TOKENS,
+        'max_tokens' => $effectiveTokens,
     ];
     if (AI_THINKING === false) {
         $payload['chat_template_kwargs'] = ['thinking' => false];
     }
 
-    // Hindari timeout total melebihi batas web server hosting (e.g. InfinityFree 30s limit, Cloudflare 100s).
-    // Batasi timeout cURL agar PHP sempat menangani error dan mengembalikan JSON sebelum web server memutus koneksi.
-    $timeout = max(15, min(AI_TIMEOUT, 60));
-    $caps = $timeout <= 30 ? [$timeout] : [(int) ceil($timeout * 0.45), $timeout];
     $raw = false;
     $status = 0;
     $error = '';
     $errno = 0;
 
-    foreach ($caps as $i => $cap) {
+    $ch = curl_init(rtrim(AI_BASE_URL, '/') . '/chat/completions');
+    $opts = [
+        CURLOPT_POST => true,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_TIMEOUT => $effectiveTimeout,
+        CURLOPT_HTTPHEADER => [
+            'Content-Type: application/json',
+            'Authorization: Bearer ' . AI_API_KEY,
+        ],
+        CURLOPT_POSTFIELDS => json_encode($payload),
+    ];
+    if (defined('AI_SSL_VERIFY') && !AI_SSL_VERIFY) {
+        $opts[CURLOPT_SSL_VERIFYPEER] = false;
+        $opts[CURLOPT_SSL_VERIFYHOST] = 0;
+    }
+    curl_setopt_array($ch, $opts);
+    $raw = curl_exec($ch);
+    $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $error = curl_error($ch);
+    $errno = curl_errno($ch);
+    curl_close($ch);
+
+    // Fallback jika sertifikat CA lokal di server hosting bermasalah (error 60 / 77)
+    if ($raw === false && ($errno === 60 || $errno === 77)) {
         $ch = curl_init(rtrim(AI_BASE_URL, '/') . '/chat/completions');
-        $opts = [
-            CURLOPT_POST => true,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_CONNECTTIMEOUT => 15,
-            CURLOPT_TIMEOUT => $cap,
-            CURLOPT_HTTPHEADER => [
-                'Content-Type: application/json',
-                'Authorization: Bearer ' . AI_API_KEY,
-            ],
-            CURLOPT_POSTFIELDS => json_encode($payload),
-        ];
-        if (defined('AI_SSL_VERIFY') && !AI_SSL_VERIFY) {
-            $opts[CURLOPT_SSL_VERIFYPEER] = false;
-            $opts[CURLOPT_SSL_VERIFYHOST] = 0;
-        }
+        $opts[CURLOPT_SSL_VERIFYPEER] = false;
+        $opts[CURLOPT_SSL_VERIFYHOST] = 0;
         curl_setopt_array($ch, $opts);
         $raw = curl_exec($ch);
         $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $error = curl_error($ch);
-        $errno = curl_errno($ch);
         curl_close($ch);
-
-        // Fallback jika sertifikat CA lokal di server hosting bermasalah (error 60 / 77)
-        if ($raw === false && ($errno === 60 || $errno === 77)) {
-            $ch = curl_init(rtrim(AI_BASE_URL, '/') . '/chat/completions');
-            $opts[CURLOPT_SSL_VERIFYPEER] = false;
-            $opts[CURLOPT_SSL_VERIFYHOST] = 0;
-            curl_setopt_array($ch, $opts);
-            $raw = curl_exec($ch);
-            $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            $error = curl_error($ch);
-            curl_close($ch);
-        }
-
-        if ($raw !== false && $status > 0) {
-            break; // dapat respons; error HTTP ditangani di bawah
-        }
-        if ($i < count($caps) - 1) {
-            sleep(1);
-        }
     }
 
     if ($raw === false) {
