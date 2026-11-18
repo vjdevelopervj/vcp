@@ -1,5 +1,11 @@
 <?php
 
+// Pastikan waktu eksekusi cukup untuk request AI tanpa timeout di server hosting
+@set_time_limit(180);
+@ini_set('max_execution_time', '180');
+@ini_set('memory_limit', '256M');
+ignore_user_abort(true);
+
 require_once __DIR__ . '/_common.php';
 require_once __DIR__ . '/../includes/ai.php';
 
@@ -86,39 +92,53 @@ session_write_close();
 
 try {
     $result = ai_generate($doc, $history, $message, $images, $attachments);
-} catch (RuntimeException $ex) {
+} catch (Throwable $ex) {
     json_out(['error' => $ex->getMessage()], 502);
 }
 
-$pdo = db();
-$pdo->beginTransaction();
-
-if (!$doc['id']) {
-    $pdo->prepare('INSERT INTO documents (user_id, title, type, content) VALUES (?, ?, ?, ?)')
-        ->execute([$uid, $doc['title'], $doc['type'], '']);
-    $doc['id'] = (int) $pdo->lastInsertId();
-}
-
-$insert = $pdo->prepare('INSERT INTO messages (document_id, role, content, attachments) VALUES (?, ?, ?, ?)');
-$insert->execute([
-    $doc['id'],
-    'user',
-    $message,
-    $attachments ? json_encode($attachments, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : null,
-]);
-$insert->execute([$doc['id'], 'assistant', $result['reply'], null]);
-
-if ($result['content'] !== null) {
-    $title = $doc['title'];
-    if (str_starts_with($title, 'Untitled ')) {
-        $title = ai_title_from_markdown($result['content']) ?? $title;
+try {
+    $pdo = db();
+    // Jika koneksi MySQL terputus selama menunggu AI, buat koneksi baru
+    try {
+        $pdo->query('SELECT 1');
+    } catch (Throwable) {
+        $pdo = db(true);
     }
-    $pdo->prepare('UPDATE documents SET title = ?, content = ? WHERE id = ?')
-        ->execute([$title, $result['content'], $doc['id']]);
-} else {
-    $pdo->prepare('UPDATE documents SET updated_at = CURRENT_TIMESTAMP WHERE id = ?')->execute([$doc['id']]);
+
+    $pdo->beginTransaction();
+
+    if (!$doc['id']) {
+        $pdo->prepare('INSERT INTO documents (user_id, title, type, content) VALUES (?, ?, ?, ?)')
+            ->execute([$uid, $doc['title'], $doc['type'], '']);
+        $doc['id'] = (int) $pdo->lastInsertId();
+    }
+
+    $insert = $pdo->prepare('INSERT INTO messages (document_id, role, content, attachments) VALUES (?, ?, ?, ?)');
+    $insert->execute([
+        $doc['id'],
+        'user',
+        $message,
+        $attachments ? json_encode($attachments, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : null,
+    ]);
+    $insert->execute([$doc['id'], 'assistant', $result['reply'], null]);
+
+    if ($result['content'] !== null) {
+        $title = $doc['title'];
+        if (str_starts_with($title, 'Untitled ')) {
+            $title = ai_title_from_markdown($result['content']) ?? $title;
+        }
+        $pdo->prepare('UPDATE documents SET title = ?, content = ? WHERE id = ?')
+            ->execute([$title, $result['content'], $doc['id']]);
+    } else {
+        $pdo->prepare('UPDATE documents SET updated_at = CURRENT_TIMESTAMP WHERE id = ?')->execute([$doc['id']]);
+    }
+    $pdo->commit();
+} catch (Throwable $e) {
+    if (isset($pdo) && $pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+    json_out(['error' => 'Gagal menyimpan riwayat chat ke database: ' . $e->getMessage()], 500);
 }
-$pdo->commit();
 
 json_out([
     'reply' => $result['reply'],

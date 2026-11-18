@@ -43,24 +43,57 @@ function oauth_available(): array
 
 /**
  * Base URL aplikasi, mengikuti host yang dipakai user (Laragon vhost, localhost,
- * atau reverse proxy yang mengirim X-Forwarded-*). Fallback ke vhost dev kalau
- * header Host aneh/di-spoof — jangan sampai jadi open redirect.
+ * atau domain hosting publik via reverse proxy / X-Forwarded-*).
  */
 function oauth_base_url(): string
 {
-    if (defined('APP_URL') && trim((string) APP_URL) !== '') {
-        return rtrim(trim((string) APP_URL), '/');
-    }
-
     $forwardedProto = strtolower(trim(explode(',', (string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''))[0]));
-    $https = $forwardedProto === 'https' || (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== '' && $_SERVER['HTTPS'] !== 'off');
+    $isHttps = $forwardedProto === 'https'
+        || (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (isset($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443);
+    $scheme = $isHttps ? 'https' : 'http';
 
     $host = trim(explode(',', (string) ($_SERVER['HTTP_X_FORWARDED_HOST'] ?? $_SERVER['HTTP_HOST'] ?? ''))[0]);
-    if (!preg_match('/^[A-Za-z0-9.\-]+(:\d{2,5})?$/', $host)) {
-        $host = 'vcp.test';
+
+    $scriptDir = '';
+    if (isset($_SERVER['SCRIPT_NAME'])) {
+        $dir = str_replace('\\', '/', dirname((string) $_SERVER['SCRIPT_NAME']));
+        $dir = preg_replace('#/(auth|api)$#i', '', $dir);
+        if ($dir !== '/' && $dir !== '.') {
+            $scriptDir = rtrim($dir, '/');
+        }
     }
 
-    return ($https ? 'https' : 'http') . '://' . $host;
+    $detectedUrl = ($host !== '' ? ($scheme . '://' . $host . $scriptDir) : '');
+
+    if (defined('APP_URL') && trim((string) APP_URL) !== '') {
+        $configuredUrl = rtrim(trim((string) APP_URL), '/');
+        $parsedConfigHost = parse_url($configuredUrl, PHP_URL_HOST);
+
+        $isVisitorLocal = empty($host)
+            || in_array($host, ['localhost', '127.0.0.1', '::1', 'vcp.test'], true)
+            || str_ends_with($host, '.test')
+            || str_ends_with($host, '.local');
+
+        $isConfigLocal = empty($parsedConfigHost)
+            || in_array($parsedConfigHost, ['localhost', '127.0.0.1', '::1', 'vcp.test'], true)
+            || str_ends_with((string) $parsedConfigHost, '.test')
+            || str_ends_with((string) $parsedConfigHost, '.local');
+
+        // Jika visitor mengakses dari domain hosting publik, tapi APP_URL masih localhost:
+        // Prioritaskan domain hosting agar callback OAuth tidak redirect ke localhost user!
+        if (!empty($host) && !$isVisitorLocal && $isConfigLocal) {
+            return $detectedUrl;
+        }
+
+        return $configuredUrl;
+    }
+
+    if (!empty($host) && preg_match('/^[A-Za-z0-9.\-]+(:\d{2,5})?$/', $host)) {
+        return $detectedUrl;
+    }
+
+    return 'http://localhost/vcp';
 }
 
 function oauth_url(string $path): string
@@ -106,17 +139,35 @@ function oauth_authorize_url(string $provider, string $state, string $verifier =
 function oauth_post_form(string $url, array $fields): array
 {
     $ch = curl_init($url);
-    curl_setopt_array($ch, [
+    $opts = [
         CURLOPT_POST => true,
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 20,
+        CURLOPT_TIMEOUT => 25,
         CURLOPT_HTTPHEADER => ['Accept: application/json', 'User-Agent: vcp'],
         CURLOPT_POSTFIELDS => http_build_query($fields),
-    ]);
+    ];
+    if (defined('AI_SSL_VERIFY') && !AI_SSL_VERIFY) {
+        $opts[CURLOPT_SSL_VERIFYPEER] = false;
+        $opts[CURLOPT_SSL_VERIFYHOST] = 0;
+    }
+    curl_setopt_array($ch, $opts);
     $raw = (string) curl_exec($ch);
     $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $error = curl_error($ch);
+    $errno = curl_errno($ch);
     curl_close($ch);
+
+    // Fallback jika sertifikat CA lokal di server hosting bermasalah (error 60 / 77)
+    if ($raw === '' && ($errno === 60 || $errno === 77)) {
+        $ch = curl_init($url);
+        $opts[CURLOPT_SSL_VERIFYPEER] = false;
+        $opts[CURLOPT_SSL_VERIFYHOST] = 0;
+        curl_setopt_array($ch, $opts);
+        $raw = (string) curl_exec($ch);
+        $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+    }
 
     if ($raw === '') {
         throw new RuntimeException('Gagal menghubungi ' . parse_url($url, PHP_URL_HOST) . ': ' . $error);
@@ -138,14 +189,30 @@ function oauth_post_form(string $url, array $fields): array
 function oauth_get_json(string $url, string $accessToken): array
 {
     $ch = curl_init($url);
-    curl_setopt_array($ch, [
+    $opts = [
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 20,
+        CURLOPT_TIMEOUT => 25,
         CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $accessToken, 'Accept: application/json', 'User-Agent: vcp'],
-    ]);
+    ];
+    if (defined('AI_SSL_VERIFY') && !AI_SSL_VERIFY) {
+        $opts[CURLOPT_SSL_VERIFYPEER] = false;
+        $opts[CURLOPT_SSL_VERIFYHOST] = 0;
+    }
+    curl_setopt_array($ch, $opts);
     $raw = (string) curl_exec($ch);
     $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $errno = curl_errno($ch);
     curl_close($ch);
+
+    if ($raw === '' && ($errno === 60 || $errno === 77)) {
+        $ch = curl_init($url);
+        $opts[CURLOPT_SSL_VERIFYPEER] = false;
+        $opts[CURLOPT_SSL_VERIFYHOST] = 0;
+        curl_setopt_array($ch, $opts);
+        $raw = (string) curl_exec($ch);
+        $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+    }
 
     $data = json_decode($raw, true);
     if (!is_array($data)) {

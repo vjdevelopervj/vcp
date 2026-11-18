@@ -33,12 +33,17 @@
         const opts = body
             ? { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': boot.csrf }, body: JSON.stringify(body) }
             : {};
-        const res = await fetch(url, opts);
+        let res;
+        try {
+            res = await fetch(url, opts);
+        } catch (fetchErr) {
+            throw new Error('Koneksi terputus atau batas waktu terlampaui (Failed to fetch). Periksa koneksi internet atau batas waktu eksekusi di server hosting.');
+        }
         if (res.status === 401) {
             location.href = 'login.php';
             throw new Error('Unauthorized');
         }
-        const data = await res.json().catch(() => ({ error: 'Respons server tidak valid.' }));
+        const data = await res.json().catch(() => ({ error: 'Respons server tidak valid (bukan JSON).' }));
         if (!res.ok) throw new Error(data.error || 'Terjadi kesalahan.');
         return data;
     }

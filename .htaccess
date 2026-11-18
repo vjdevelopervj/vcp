@@ -27,3 +27,14 @@ Options -Indexes
 <FilesMatch "\.(log|sql|ini|bak|old|md|sh|zip|gz)$">
     Require all denied
 </FilesMatch>
+
+# Alokasi waktu eksekusi cukup untuk request AI jika Apache menjalankan mod_php
+<IfModule mod_php.c>
+    php_value max_execution_time 180
+</IfModule>
+<IfModule mod_php7.c>
+    php_value max_execution_time 180
+</IfModule>
+<IfModule mod_php8.c>
+    php_value max_execution_time 180
+</IfModule>

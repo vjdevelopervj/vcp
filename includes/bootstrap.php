@@ -2,10 +2,15 @@
 
 require_once __DIR__ . '/../config.php';
 
+$forwardedProto = strtolower(trim(explode(',', (string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''))[0]));
+$isHttps = $forwardedProto === 'https'
+    || (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+    || (isset($_SERVER['SERVER_PORT']) && (int) $_SERVER['SERVER_PORT'] === 443);
+
 session_set_cookie_params([
     'httponly' => true,
     'samesite' => 'Lax',
-    'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+    'secure' => $isHttps,
 ]);
 session_start();
 
@@ -20,10 +25,10 @@ function valid_type(mixed $type): ?string
     return is_string($type) && array_key_exists($type, DOC_TYPES) ? $type : null;
 }
 
-function db(): PDO
+function db(bool $forceReconnect = false): PDO
 {
     static $pdo = null;
-    if ($pdo === null) {
+    if ($pdo === null || $forceReconnect) {
         $dsn = sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4', DB_HOST, DB_PORT, DB_NAME);
         $pdo = new PDO($dsn, DB_USER, DB_PASS, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
