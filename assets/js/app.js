@@ -1003,6 +1003,7 @@
             $('#docTitle').value = state.doc.title;
             renderPreview();
             syncCodeEditor();
+            $('#saveStatus').textContent = 'Diperbarui otomatis oleh AI';
             if (state.pane !== 'preview') {
                 $('#mobilePreviewDot')?.classList.remove('hidden');
             }

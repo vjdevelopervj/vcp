@@ -7,6 +7,7 @@ const MAX_TEXT_PROMPT_CHARS = 12000;
 
 function ai_system_prompt(string $type): string
 {
+    $today = date('d F Y');
     $focus = [
         'planning' => 'a project PLANNING document: overview, goals, scope (in/out), milestones & timeline, task breakdown, team/roles, risks & mitigations, success metrics.',
         'design' => 'a DESIGN document: design principles, user personas, user flows, information architecture, page/screen inventory, UI components, design tokens (colors, typography, spacing), accessibility notes, and technical architecture where relevant.',
@@ -19,6 +20,12 @@ You help the user write {$focus}
 
 Rules:
 - Reply in the same language the user writes in.
+- INFORMASI WAKTU: Tanggal hari ini adalah {$today}. Gunakan tanggal ini ({$today}) untuk mengisi kolom Tanggal pada tabel metadata dokumen atau bila diminta oleh pengguna. DILARANG membiarkan placeholder {{TANGGAL}} atau {{TANGGAL_DOKUMEN}} tetap ada di dokumen!
+- TABEL METADATA (Nama Produk, Versi, Disusun oleh, Untuk, Tanggal, Dokumen Terkait):
+  - Jika pengguna meminta mengubah nama pembuat ('Disusun oleh'), perbarui baris `| **Disusun oleh** | <Nama> |`.
+  - Jika pengguna meminta mengubah penerima/klien/tujuan ('Untuk'), perbarui baris `| **Untuk** | <Nama/Agency> |`.
+  - Jika pengguna meminta mengubah nama produk, perbarui judul dokumen `# PRODUCT REQUIREMENTS DOCUMENT (PRD)`, subjudul `## <Nama Produk>`, dan baris `| **Nama Produk** | <Nama Produk> |`.
+  - Jika pengguna meminta tanggal hari ini, tuliskan tanggal hari ini ({$today}) pada baris `| **Tanggal** | {$today} |`.
 - Bahasa user boleh gaul, singkatan, atau campur Inggris. Terjemahkan dulu maksudnya, baru kerjakan. Jangan mengoreksi gaya bahasanya dan jangan menanyakan arti kata gaul.
   Kamus cepat (tulis user → maksud di dokumen): gua/gue/gw/aku → saya · lu/elo → pengguna target · pengen/pingin/mau → ingin · bikin → membuat · gak/ga/ndak/tak → tidak · udah/udh/sdh → sudah · gmn/gimana → bagaimana · bgt/parah → sangat · kek/kyk/kayak → seperti · utk/dpt/skrng/trs → untuk/dapat/sekarang/terus · notif/notip → notifikasi · app → aplikasi · web-an → situs web · cuan → keuntungan · boncos → rugi · ribet → rumit · gak ribet/gampang → sederhana & mudah dipakai · rame → trafik tinggi · lemot → performa lambat · crash/mati → error · login pake google → OAuth Google · dark mode → tema gelap · bisa bayar/checkout → pembayaran in-app · chat kayak WA → pesan instan · tracking lokasi → lokasi real-time · reminder → pengingat · to-do → daftar tugas · wishlist → daftar simpanan · deadline → tenggat · brief/scope → ruang lingkup · review/feedback → masukan · export/share → ekspor & berbagi
   - Kalau prompt user gaul/singkatan/campur Inggris: mulai balasan dengan SATU kalimat "Kupahami: <maksudnya dengan istilah yang benar>", mis. "Kupahami: aplikasi POS untuk warung makan dengan laporan harian." — supaya user langsung tahu terjemahannya benar. Kalau prompt sudah formal dan jelas (mis. daftar "Pilihan platform & teknologi"), kerjakan langsung tanpa kalimat itu.
@@ -159,9 +166,26 @@ function ai_build_messages(array $document, array $history, string $userMessage,
         ];
     }
 
+    $historySlice = array_slice($history, -10);
+    $lastAssistantIdx = -1;
+    for ($i = count($historySlice) - 1; $i >= 0; $i--) {
+        if ($historySlice[$i]['role'] === 'assistant') {
+            $lastAssistantIdx = $i;
+            break;
+        }
+    }
+
     $historyImages = [];
-    foreach (array_slice($history, -12) as $msg) {
-        $messages[] = ['role' => $msg['role'], 'content' => $msg['content']];
+    foreach ($historySlice as $idx => $msg) {
+        $content = $msg['content'];
+        // KUNCI: Tempelkan dokumen aktif ke pesan asisten terakhir di history agar model AI
+        // melihat contoh konkret bahwa balasan asisten selalu menyertakan dokumen lengkap
+        // di antara <<<DOCUMENT dan DOCUMENT>>>. Jika tidak, model hanya meniru kalimat teaser
+        // asisten sebelumnya dan berhenti tanpa menuliskan dokumen.
+        if ($idx === $lastAssistantIdx && trim($document['content']) !== '') {
+            $content = trim($content) . "\n\n" . DOC_START . "\n" . $document['content'] . "\n" . DOC_END;
+        }
+        $messages[] = ['role' => $msg['role'], 'content' => $content];
         foreach ((array) json_decode((string) ($msg['attachments'] ?? ''), true) as $att) {
             // Baris lama menyimpan array of string; yang baru menyimpan object {url,kind,name}.
             $url = is_array($att) ? ($att['url'] ?? '') : $att;
