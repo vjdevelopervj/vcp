@@ -22,7 +22,7 @@ Rules:
 - Bahasa user boleh gaul, singkatan, atau campur Inggris. Terjemahkan dulu maksudnya, baru kerjakan. Jangan mengoreksi gaya bahasanya dan jangan menanyakan arti kata gaul.
   Kamus cepat (tulis user → maksud di dokumen): gua/gue/gw/aku → saya · lu/elo → pengguna target · pengen/pingin/mau → ingin · bikin → membuat · gak/ga/ndak/tak → tidak · udah/udh/sdh → sudah · gmn/gimana → bagaimana · bgt/parah → sangat · kek/kyk/kayak → seperti · utk/dpt/skrng/trs → untuk/dapat/sekarang/terus · notif/notip → notifikasi · app → aplikasi · web-an → situs web · cuan → keuntungan · boncos → rugi · ribet → rumit · gak ribet/gampang → sederhana & mudah dipakai · rame → trafik tinggi · lemot → performa lambat · crash/mati → error · login pake google → OAuth Google · dark mode → tema gelap · bisa bayar/checkout → pembayaran in-app · chat kayak WA → pesan instan · tracking lokasi → lokasi real-time · reminder → pengingat · to-do → daftar tugas · wishlist → daftar simpanan · deadline → tenggat · brief/scope → ruang lingkup · review/feedback → masukan · export/share → ekspor & berbagi
   - Kalau prompt user gaul/singkatan/campur Inggris: mulai balasan dengan SATU kalimat "Kupahami: <maksudnya dengan istilah yang benar>", mis. "Kupahami: aplikasi POS untuk warung makan dengan laporan harian." — supaya user langsung tahu terjemahannya benar. Kalau prompt sudah formal dan jelas (mis. daftar "Pilihan platform & teknologi"), kerjakan langsung tanpa kalimat itu.
-  - Prompt pendek/parsial ("app kasir", "bikinin prd dong") TETAP dikerjakan: pakai konteks yang ada, isi sisanya dengan asumsi wajar, dan tulis asumsi itu di bab asumsi/TBD — bukan ditanya balik.
+  - Prompt pendek/parsial ("app kasir", "bikinin prd dong") TETAP langsung dibuatkan draf dokumennya: pakai konteks yang ada, isi dengan asumsi wajar dan rekomendasikan yang terbaik di dalam dokumen. Khusus dokumen PRD, sertakan pertanyaan di balasan chat (nama produk dan preferensi tech stack) agar user bisa mengetik langsung keputusannya.
   - Minta klarifikasi hanya kalau maksudnya benar-benar tidak bisa ditebak (mis. tidak jelas dokumen apa yang diminta).
   - Nada balasan chat boleh santai mengikuti gaya user, tetap sopan dan ringkas. ISI DOKUMEN selalu bahasa Indonesia formal: istilah gaul diganti istilah teknis yang tepat — termasuk di dalam sel tabel, judul, dan glosarium (mis. sel "Gua/Pemilik Warung" ditulis "Pemilik warung"). Kutipan ucapan user pun ditulis ulang formal: jangan menulis aplikasi "lebih gak ribet", tulis aplikasi "lebih sederhana". Dokumen yang masih memuat satu saja kata gaul dari kamus di atas harus ditulis ulang dengan istilah formal sebelum dikirim.
 - Always respond in exactly two parts:
@@ -54,7 +54,7 @@ PROMPT;
         );
         $template = str_replace(
             '| **{{ENTITAS_1}}** | {{FIELD_UTAMA}} | {{KETERANGAN}} |',
-            "| **{{ENTITAS_1}}** | {{FIELD_UTAMA}} | {{KETERANGAN}} |\n\n<!-- Kolom Field Utama WAJIB memakai tipe field asli database yang dipilih user di 5.1, dan nama database itu disebut dalam satu kalimat sebelum tabel. MySQL/MariaDB: id INT AUTO_INCREMENT, name VARCHAR(100), created_at DATETIME. PostgreSQL: SERIAL, TEXT. SQLite: INTEGER PRIMARY KEY AUTOINCREMENT. MongoDB/Firestore: sebut koleksi dan dokumennya, bukan tabel relasional. Kalau 5.1 tidak ada database (client-only), jangan tulis skema: ganti tabel ini jadi entitas logis dan jelaskan datanya disimpan di mana (state aplikasi, localStorage, IndexedDB). -->",
+            "| **{{ENTITAS_1}}** | {{FIELD_UTAMA}} | {{KETERANGAN}} |\n\n<!-- Kolom Field Utama WAJIB memakai tipe field asli database yang dipilih user di Bab 14 (Stack Teknologi), dan nama database itu disebut dalam satu kalimat sebelum tabel. MySQL/MariaDB: id INT AUTO_INCREMENT, name VARCHAR(100), created_at DATETIME. PostgreSQL: SERIAL, TEXT. SQLite: INTEGER PRIMARY KEY AUTOINCREMENT. MongoDB/Firestore: sebut koleksi dan dokumennya, bukan tabel relasional. Kalau Bab 14 tidak ada database (client-only), jangan tulis skema: ganti tabel ini jadi entitas logis dan jelaskan datanya disimpan di mana (state aplikasi, localStorage, IndexedDB). -->",
             $template
         );
         $template = str_replace(
@@ -62,47 +62,45 @@ PROMPT;
             "**Catatan:** field dalam [tanda kurung siku] merupakan bagian dari fitur usulan/Fase Lanjutan (Bab 11).\n\n## 8.1 Diagram ERD\n\n<!-- WAJIB: sub-bab ini berisi PERSIS SATU blok kode ```mermaid yang baris pertamanya adalah kata erDiagram (BUKAN flowchart), memodelkan entitas pada tabel Bab 8 dengan relasi seperti ||--o{. Contoh bentuk:\n```mermaid\nerDiagram\n    PENGGUNA ||--o{ PESANAN : membuat\n    PRODUK }o--|| KATEGORI : termasuk\n``` -->",
             $template
         );
-        // Sub-bab 5.1 ikut disuntikkan ke skeleton: instruksi "tambahkan sub-bab baru" saja
-        // sering diabaikan karena model menyalin struktur template apa adanya.
-        $template = str_replace(
-            '- {{ASUMSI_2}}',
-            "- {{ASUMSI_2}}\n\n## 5.1 Stack Teknologi\n\n<!-- WAJIB: satu baris per pilihan, LABEL-nya persis seperti daftar \"Pilihan platform & teknologi\" dari user, contoh format:\n- Kategori aplikasi: Web\n- Teknologi frontend: Laravel Blade + Alpine\n- Bahasa pemrograman: PHP\n- Perlu backend: Ya, butuh backend\n- Backend: Backend custom (dibangun sendiri)\n- Framework backend: Laravel\n- Perlu database: Ya, butuh database\n- Database: MySQL/MariaDB\nNilai pada contoh di atas BUKAN yang ditulis — pakai nilai dari user. Baris yang tidak ditanyakan user jangan dikarang.\nKalau user menjawab \"belum tahu (tolong rekomendasikan beserta alasannya)\", format barisnya persis: nama teknologi diikuti tanda kurung yang harus ditulis apa adanya, lalu alasannya setelah tanda strip. Contoh bentuk (jangan salin isinya):\n- Teknologi frontend: Flutter (rekomendasi, perlu dikonfirmasi) — alasan: satu codebase untuk Android dan iOS\n- Database: PostgreSQL (rekomendasi, perlu dikonfirmasi) — alasan: relasi transaksi dan produk banyak\nTulisan (rekomendasi, perlu dikonfirmasi) wajib muncul di SETIAP baris hasil rekomendasi, bukan hanya sebagian, dan tiap baris itu wajib diulang jadi satu butir Bab 12. Sub-bab yang rekomendasi-nya tidak ditandai persis begitu dianggap TIDAK LENGKAP.\nKalau percakapan belum membahas teknologi sama sekali, tulis \"- Belum dibahas (perlu dikonfirmasi user)\".-->",
-            $template
-        );
         $template = str_replace(
             '- {{PERTANYAAN_1}}',
-            "- {{PERTANYAAN_1}}\n\n<!-- WAJIB: buatkan SATU butir untuk SETIAP baris 5.1 yang ditandai (rekomendasi, perlu dikonfirmasi) — jangan hanya satu. Contoh format: \"- Database: PostgreSQL — rekomendasi pengembang, belum dikonfirmasi user.\" Baru tambahkan hal lain yang belum diputuskan (biaya, kebijakan, timeline). -->",
+            "- {{PERTANYAAN_1}}\n\n<!-- WAJIB: buatkan SATU butir untuk SETIAP baris di Bab 14 (Stack Teknologi) yang masih ditandai (Rekomendasi, perlu dikonfirmasi) — contoh: \"- Database: PostgreSQL — rekomendasi pengembang, belum dikonfirmasi user.\" Jika nama resmi produk/aplikasi belum ditentukan pengguna, WAJIB buatkan satu butir: \"- Nama resmi produk/aplikasi: belum ditentukan oleh pengguna (masih menggunakan nama kerja sementara).\" Baru tambahkan hal lain yang belum diputuskan (biaya, kebijakan, timeline). -->",
             $template
         );
         $base .= <<<PROMPT
 
 
-## PRD TEMPLATE (WAJIB DIKIRIMI)
+## PRD TEMPLATE (WAJIB DIIKUTI SECARA PERSIS)
 Untuk dokumen PRD, struktur dokumen WAJIB mengikuti template di bawah ini secara persis:
 - Bab dan penomoran sama, format tabel sama, placeholder {{...}} diisi dari isi percakapan.
 - Komentar HTML <!-- ... --> di template hanyalah panduan untukmu dan TIDAK boleh muncul di output.
 - Patuhi semua aturan di bagian instruksi template (ID kebutuhan PREFIX-N, prioritas Wajib/Penting/Fase 2, informasi yang belum diputuskan masuk Bab 12 / TBD, jangan mengarang, versi v0.1).
-- Tambahan WAJIB agar PRD makin lengkap:
-  1. Pada Bab 7 (Alur Pengguna Utama), SETELAH deskripsi alur 7.1, sertakan PERSIS SATU blok kode fenced ```mermaid berisi flowchart TD alur aplikasi utama (happy path + jalur alternatif penting). Jangan menambah blok mermaid lain di dalam Bab 7.
-  2. WAJIB tambahkan sub-bab baru "## 8.1 Diagram ERD" tepat setelah tabel Bab 8 (Model Data), berisi PERSIS SATU blok kode fenced ```mermaid yang baris pertamanya adalah kata erDiagram, memodelkan entitas di Bab 8 dengan relasi ||--o{ atau }o--||. Blok di 8.1 BUKAN flowchart. Bentuknya seperti ini:
-     ```mermaid
-     erDiagram
-         PENGGUNA ||--o{ PESANAN : membuat
-         PRODUK }o--|| KATEGORI : termasuk
-     ```
-  Dokumen PRD tanpa blok flowchart di Bab 7 ATAU tanpa blok erDiagram di 8.1 dianggap TIDAK LENGKAP dan harus dilengkapi sebelum dikirim.
-  3. Aturan SYNTAX MERMAID (dipelanggar = diagram error saat dirender, jadi cek ulang sebelum mengirim):
-     - Baris pertama blok flowchart selalu deklarasi arah: flowchart TD atau flowchart LR.
-     - SETIAP label node diapit tanda kutip ganda, termasuk yang terasa aman: A["Pengguna login"] --> B["Dashboard"], dan H{"Pembayaran sukses?"}.
-     - Label di atas panah juga dikutip: A -->|"Ya (setelah verifikasi)"| B.
-     - Penyebab error paling umum: kurung di label tanpa kutip. SALAH A[Parameter (Asal, Tujuan)] -> BENAR A["Parameter (Asal, Tujuan)"].
-     - Jangan menaruh tag HTML, emoji, atau titik-koma di dalam label. Maksimal 6 kata per label.
-- Jika pesan user memuat daftar "Pilihan platform & teknologi", itu KEPUTUSAN RESMI: pakai persis seperti ditulis, jangan mengganti teknologi, dan jangan menanyakan ulang hal yang sudah dijawab.
-  1. Sub-bab "## 5.1 Stack Teknologi" sudah tersedia di template: pakai LABEL persis dari daftar user dan NILAI persis pilihan user, satu baris per item. Menulis "Laravel" saja tanpa baris "Bahasa pemrograman: ..." dan baris database dianggap mengabaikan pilihan user.
-     Dokumen PRD yang sub-bab 5.1-nya tidak punya baris "Bahasa pemrograman: ..." dan baris database ("Database: ..." kalau user butuh, atau "Perlu database: Tidak..." kalau tidak) dianggap TIDAK LENGKAP dan harus dilengkapi sebelum dikirim.
-  2. Bab 8 Model Data: kalau "Perlu database" = Ya, sebutkan nama database yang dipilih di kalimat pembuka, lalu pakai tipe field yang benar untuk database itu (MySQL/MariaDB: INT AUTO_INCREMENT, VARCHAR(n); PostgreSQL: SERIAL, TEXT; SQLite: INTEGER PRIMARY KEY AUTOINCREMENT; MongoDB/Firestore: koleksi/dokumen, bukan tabel relasional). Kalau "Perlu database" = Tidak, jangan bikin skema tabel: tulis Bab 8 sebagai model entitas logis dan jelaskan datanya disimpan di mana (state aplikasi, localStorage/IndexedDB, atau file).
-  3. Baris "Perlu backend: Tidak, tanpa backend (client-only)" berarti tidak ada server: jangan tambahkan API endpoint, framework server, atau migrations di bab manapun. Kalau user tetap memilih butuh database, tulis sebagai penyimpanan sisi klien/BaaS dan catat sebagai hal yang perlu dikonfirmasi di Bab 12.
-  4. Bab 12 (TBD) dan milestone/fitur lanjutan: tulis pekerjaan teknis sesuai stack itu juga (mis. "buat migrasi Laravel", bukan "buat migrasi Django").
+
+### ATURAN WAJIB CHAT & INTERAKSI (PRD):
+1. TANYA NAMA PRODUK:
+   - Jika pengguna belum menyebutkan nama produk/aplikasi secara spesifik (misal hanya menyebut ide seperti "aplikasi kasir", "marketplace jasa", "website absensi"), pada balasan percakapan (bagian 1 sebelum <<<DOCUMENT) kamu WAJIB menanyakan nama produknya secara ramah agar tidak terlewat di PRD.
+   - Contoh pertanyaan: "Apa nama produk atau aplikasi yang ingin kamu gunakan? (Contoh: KasirKu, AbsensiKreatif, dll. agar bisa langsung saya sematkan di dokumen)."
+2. TANYA PREFERENSI TECH STACK:
+   - Jika pengguna belum menentukan tech stack, ajukan pertanyaan terbuka di balasan percakapan (BUKAN pilihan ganda, tombol, atau chip) agar pengguna dapat mengetik langsung pilihannya.
+   - Contoh pertanyaan: "Untuk teknologinya, apakah kamu punya preferensi bahasa pemrograman, frontend, backend, atau database tertentu? Atau mau saya bantu pilihkan stack yang paling pas?"
+   - Jika pengguna SUDAH menyebutkan nama produk dan/atau tech stack, konfirmasikan pilihannya dan jangan menanyakan ulang apa yang sudah dijawab.
+
+### ATURAN WAJIB DOKUMEN PRD:
+1. NAMA PRODUK DI DOKUMEN:
+   - Jika belum ditentukan pengguna, gunakan nama kerja sementara di judul dokumen (mis. "## [Nama Produk: Kasir Online (Menunggu Konfirmasi)]"), di tabel metadata tulis "(Menunggu Konfirmasi User)", dan catat di Bab 12 (TBD).
+   - Begitu pengguna menyebutkan atau membalas nama produk di chat, langsung perbarui judul `# PRODUCT REQUIREMENTS DOCUMENT (PRD)`, subjudul `## <NAMA_PRODUK>`, tabel metadata, dan semua penyebutan produk di seluruh dokumen, serta hapus butir pertanyaan nama produk dari Bab 12.
+2. BAB 14. STACK TEKNOLOGI (TECH STACK) DI BAGIAN PALING BAWAH:
+   - Bab 14 WAJIB berada di BAGIAN PALING BAWAH dokumen (setelah Bab 13 Glosarium).
+   - Sajikan dalam bentuk tabel: Platform, Frontend, Bahasa Pemrograman, Backend, Database, dan Hosting / Infrastruktur beserta kolom Catatan & Alasan Pemilihan.
+   - Jika pengguna sudah menentukan teknologi, WAJIB gunakan teknologi pilihan pengguna tersebut.
+   - Jika pengguna belum menentukan, berikan rekomendasi stack terbaik dan tandai jelas dengan "(Rekomendasi, perlu dikonfirmasi user)" pada kolom Teknologi Terpilih beserta alasannya.
+3. DIAGRAM ALUR (Bab 7) & ERD (Bab 8.1):
+   - Bab 7: SETELAH deskripsi alur 7.1, sertakan PERSIS SATU blok kode fenced ```mermaid berisi flowchart TD alur aplikasi utama (happy path + jalur alternatif penting). Baris pertama `flowchart TD`. Setiap label node dan label panah WAJIB diapit tanda kutip ganda: A["Cari tiket (asal, tujuan)"] --> B["Hasil"].
+   - Bab 8.1: Tepat setelah tabel Bab 8 (Model Data), sertakan PERSIS SATU blok kode fenced ```mermaid yang baris pertamanya adalah kata `erDiagram` (BUKAN flowchart), memodelkan entitas di Bab 8 dengan relasi ||--o{ atau }o--||.
+   - Dokumen PRD tanpa blok flowchart di Bab 7 ATAU tanpa blok erDiagram di 8.1 dianggap TIDAK LENGKAP.
+4. MODEL DATA (Bab 8):
+   - Jika "Database" di Bab 14 terisi, sebutkan nama database yang dipilih di kalimat pembuka Bab 8, lalu gunakan tipe field yang benar untuk database itu (MySQL/MariaDB: INT AUTO_INCREMENT, VARCHAR(n); PostgreSQL: SERIAL, TEXT; SQLite: INTEGER PRIMARY KEY AUTOINCREMENT; MongoDB/Firestore: sebut koleksi dan dokumen). Jika client-only tanpa database, tulis sebagai model entitas logis dan jelaskan datanya disimpan di mana (state aplikasi, localStorage/IndexedDB).
+   - Jika backend adalah client-only / tanpa server, jangan tambahkan API endpoint, framework server, atau server migrations di bab mana pun.
 
 === TEMPLATE PRD (MULAI) ===
 {$template}
@@ -645,11 +643,26 @@ MD,
 
 ## 9. Open Questions
 - Model monetisasi apa yang akan digunakan?
+- Nama resmi produk/aplikasi yang diinginkan?
+- Preferensi teknologi & database?
+
+## 10. Stack Teknologi (Tech Stack)
+| Komponen | Pilihan | Catatan & Alasan |
+|---|---|---|
+| Platform | Web | Pilihan awal |
+| Frontend | React / Tailwind CSS | Rekomendasi |
+| Backend | Node.js / Express | Rekomendasi |
+| Database | PostgreSQL | Rekomendasi |
+| Hosting | Vercel / VPS | Rekomendasi |
 MD,
     ];
 
     $content = $templates[$document['type']];
     $reply = "Ini draft awal dokumen " . DOC_TYPES[$document['type']] . " untuk idemu. Saat ini VCP berjalan di mode demo — isi `AI_API_KEY` di config.php agar AI bisa menyusun dan merevisi dokumen secara penuh.";
+
+    if ($document['type'] === 'prd') {
+        $reply .= " Ngomong-ngomong, apa nama produk atau aplikasi yang ingin kamu gunakan? Dan apakah kamu punya preferensi tech stack (bahasa, frontend, backend, database) atau ingin rekomendasi?";
+    }
 
     if ($document['type'] === 'design') {
         $content .= $embeds ?: "\n\n## Referensi Visual\n\n(menunggu referensi gambar — lampirkan 1-3 screenshot UI lewat ikon penjepit di bawah kolom chat, lalu aku petakan ke design token.)\n";

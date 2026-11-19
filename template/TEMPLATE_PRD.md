@@ -199,6 +199,23 @@ dalam dokumen. Format: "**Istilah :** definisi singkat." -->
 
 - **{{ISTILAH_1}} :** {{DEFINISI_1}}
 
+# 14. Stack Teknologi (Tech Stack)
+
+<!-- WAJIB DI BAGIAN PALING BAWAH DOKUMEN:
+Tabel dan ringkasan pilihan teknologi yang dipilih oleh pengguna atau disepakati untuk proyek ini.
+- Jika pengguna sudah menyebutkan preferensi teknologinya (misal: Flutter, React, Laravel, PostgreSQL, dll.), gunakan pilihan tersebut.
+- Jika pengguna belum menentukan atau menyerahkan ke pengembang, tuliskan rekomendasi terbaik yang paling sesuai dengan kebutuhan sistem, dan beri tanda "(Rekomendasi, perlu dikonfirmasi user)" beserta alasannya.
+- Setiap baris rekomendasi yang belum dikonfirmasi wajib tercatat juga sebagai butir pertanyaan di Bab 12 (TBD). -->
+
+| **Komponen** | **Teknologi Terpilih** | **Catatan & Alasan Pemilihan** |
+| --- | --- | --- |
+| **Platform** | {{STACK_PLATFORM}} | {{CATATAN_PLATFORM}} |
+| **Frontend** | {{STACK_FRONTEND}} | {{CATATAN_FRONTEND}} |
+| **Bahasa Pemrograman** | {{STACK_BAHASA}} | {{CATATAN_BAHASA}} |
+| **Backend** | {{STACK_BACKEND}} | {{CATATAN_BACKEND}} |
+| **Database** | {{STACK_DATABASE}} | {{CATATAN_DATABASE}} |
+| **Hosting / Infrastruktur** | {{STACK_HOSTING}} | {{CATATAN_HOSTING}} |
+
 ---
 
 *Dokumen ini merupakan draft sementara dan dapat berubah seiring pembahasan lebih lanjut dengan klien.*
