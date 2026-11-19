@@ -37,14 +37,14 @@
         try {
             res = await fetch(url, opts);
         } catch (fetchErr) {
-            throw new Error('Koneksi terputus atau batas waktu terlampaui (Failed to fetch). Periksa koneksi internet atau batas waktu eksekusi di server hosting.');
+            throw new Error('Koneksi terputus atau batas waktu terlampaui (' + (fetchErr.message || 'Failed to fetch') + ').');
         }
         if (res.status === 401) {
             location.href = 'login.php';
             throw new Error('Unauthorized');
         }
-        const data = await res.json().catch(() => ({ error: 'Respons server tidak valid (bukan JSON).' }));
-        if (!res.ok) throw new Error(data.error || 'Terjadi kesalahan.');
+        const data = await res.json().catch(() => ({ error: 'Respons server tidak valid (HTTP ' + res.status + ').' }));
+        if (!res.ok) throw new Error(data.error || ('Terjadi kesalahan (HTTP ' + res.status + ').'));
         return data;
     }
 
@@ -1166,7 +1166,7 @@
         box.scrollTop = box.scrollHeight;
 
         try {
-            const data = await api('api/chat.php', currentId
+            const data = await api('api/generate.php', currentId
                 ? { document_id: currentId, message: text, attachments }
                 : { type: draftType, message: text, attachments });
             if (!isCurrent()) {

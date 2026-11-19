@@ -350,7 +350,7 @@ function ai_complete(array $messages): string
     }
 
     if ($raw === false) {
-        throw new RuntimeException('Gagal menghubungi AI provider (sudah dicoba ' . count($caps) . 'x): ' . $error);
+        throw new RuntimeException('Gagal menghubungi AI provider: ' . $error);
     }
     $data = json_decode($raw, true);
     if ($status >= 400 || !isset($data['choices'][0]['message']['content'])) {
