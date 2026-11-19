@@ -294,10 +294,9 @@ function ai_complete(array $messages): string
     $host = trim(explode(',', (string) ($_SERVER['HTTP_X_FORWARDED_HOST'] ?? $_SERVER['HTTP_HOST'] ?? ''))[0]);
     $isLocal = empty($host) || in_array($host, ['localhost', '127.0.0.1', 'vcp.test'], true) || str_ends_with($host, '.test');
 
-    // Di shared hosting gratis (seperti InfinityFree), batas waktu eksekusi PHP dibatasi ketat 20 detik oleh server.
-    // Batasi timeout cURL ke 15 detik dan token ke 3000 agar respons selesai sebelum server memutus koneksi paksa.
-    $effectiveTimeout = $isLocal ? AI_TIMEOUT : min(AI_TIMEOUT, 15);
-    $effectiveTokens = $isLocal ? AI_MAX_TOKENS : min(AI_MAX_TOKENS, 3000);
+    // Beri batas waktu cURL yang cukup bagi model AI untuk generate dokumen (45-50 detik).
+    $effectiveTimeout = $isLocal ? AI_TIMEOUT : max(35, min(AI_TIMEOUT, 50));
+    $effectiveTokens = $isLocal ? AI_MAX_TOKENS : min(AI_MAX_TOKENS, 4096);
 
     $payload = [
         'model' => AI_MODEL,
