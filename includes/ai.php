@@ -26,12 +26,16 @@ Rules:
   - Minta klarifikasi hanya kalau maksudnya benar-benar tidak bisa ditebak (mis. tidak jelas dokumen apa yang diminta).
   - Nada balasan chat boleh santai mengikuti gaya user, tetap sopan dan ringkas. ISI DOKUMEN selalu bahasa Indonesia formal: istilah gaul diganti istilah teknis yang tepat — termasuk di dalam sel tabel, judul, dan glosarium (mis. sel "Gua/Pemilik Warung" ditulis "Pemilik warung"). Kutipan ucapan user pun ditulis ulang formal: jangan menulis aplikasi "lebih gak ribet", tulis aplikasi "lebih sederhana". Dokumen yang masih memuat satu saja kata gaul dari kamus di atas harus ditulis ulang dengan istilah formal sebelum dikirim.
 - Always respond in exactly two parts:
-  1. A short conversational reply (1-4 sentences) explaining what you did or asking clarifying questions.
+  1. A short conversational reply (1-3 sentences) explaining what you did or asking clarifying questions.
   2. The COMPLETE, updated markdown document wrapped between a line containing only `<<<DOCUMENT` and a line containing only `DOCUMENT>>>`.
-- HANYA dokumen yang boleh berada di antara kedua marker itu. Kalimat pembuka, ringkasan, atau bagian "Konteks Singkat" harus tetap di luar marker.
+- ATURAN REVISI / PENAMBAHAN ISI DOKUMEN (BERLAKU UNTUK SEMUA DOKUMEN: PRD, PLANNING, DESIGN):
+  - KETIKA PENGGUNA MEMINTA MENGUBAH, MENAMBAH, ATAU MEMPERBAIKI ISI DOKUMEN (mis. menambah fitur, mengubah nama produk, mengubah tech stack, merevisi alur, memperbaiki bab tertentu):
+    1. Kamu WAJIB langsung mengaplikasikan perubahan tersebut ke dalam dokumen.
+    2. Kamu WAJIB menuliskan ulang SELURUH ISI DOKUMEN LENGKAP dari baris pertama (# Judul) sampai bab terakhir di antara `<<<DOCUMENT` dan `DOCUMENT>>>`.
+    3. DILARANG KERAS hanya mengirimkan potongan bab, diff, atau rangkuman. Jangan pernah memotong dokumen atau menulis "bagian lain tetap sama". Seluruh bab harus tetap ada dan utuh.
+    4. Terapkan perubahan pengguna ke semua bagian terkait secara konsisten.
+- HANYA dokumen yang boleh berada di antara kedua marker itu. Kalimat pembuka, ringkasan, atau percakapan harus berada di luar marker.
 - The document must be valid GitHub-flavored markdown starting with a single `# Title` heading. Use headings, lists, tables and checklists where useful.
-- When the user requests a change, rewrite the whole document with the change applied; never return only a diff.
-- If the request is unrelated to the document, reply normally and return the current document unchanged.
 - Treat the conversation as the source material (like meeting notes / MoM between developer and client).
 - Kirim dokumen LENGKAP tepat satu kali. Jangan mengulang, menduplikasi, atau mencetak ulang dokumen di dalam balasan.
 PROMPT;
@@ -144,7 +148,14 @@ function ai_build_messages(array $document, array $history, string $userMessage,
     if (trim($document['content']) !== '') {
         $messages[] = [
             'role' => 'system',
-            'content' => "Current document:\n" . DOC_START . "\n" . $document['content'] . "\n" . DOC_END,
+            'content' => "=== DOKUMEN AKTIF SAAT INI (EXISTING DOCUMENT) ===\n" . DOC_START . "\n" . $document['content'] . "\n" . DOC_END
+                . "\n\n=== INSTRUKSI WAJIB PEMBARUAN/REVISI DOKUMEN ===\n"
+                . "Pengguna ingin mengubah, menambah, atau merevisi dokumen di atas berdasarkan pesan berikutnya.\n"
+                . "ATURAN MUTLAK:\n"
+                . "1. Terapkan seluruh perubahan, penambahan fitur, atau revisi yang diminta pengguna ke dalam dokumen di atas.\n"
+                . "2. Kamu WAJIB mengembalikan SELURUH DOKUMEN SECARA LENGKAP dari baris pertama (`# Judul`) hingga bab/bagian terakhir di antara " . DOC_START . " dan " . DOC_END . ".\n"
+                . "3. DILARANG KERAS hanya mengirim potongan bab, diff, atau rangkuman. Seluruh bab dan bagian dokumen yang tidak diubah WAJIB tetap disertakan secara utuh.\n"
+                . "4. Tulis balasan percakapan ramah dan ringkas (1-2 kalimat) di luar marker.",
         ];
     }
 
@@ -420,56 +431,79 @@ function ai_parse(string $text): array
     // Marker yang ikut terformat markdown (### <<<DOCUMENT) atau terbalik (>>>DOCUMENT).
     $text = preg_replace('/^[ \t]*#{1,6}[ \t]*(<<<DOCUMENT|DOCUMENT>>>)[ \t]*$/m', '$1', $text);
     $text = preg_replace('/^[ \t]*>>>[ \t]*DOCUMENT[ \t]*$/m', DOC_END, $text);
-    $endRe = '/^' . preg_quote(DOC_END, '/') . '[ \t]*$/m';
-    $startRe = '/^' . preg_quote(DOC_START, '/') . '[ \t]*$/m';
 
-    preg_match_all($endRe, $text, $ends, PREG_OFFSET_CAPTURE);
-    $endPos = array_column($ends[0], 1);
+    $hasStart = preg_match('/<<<DOCUMENT/i', $text, $sm, PREG_OFFSET_CAPTURE) === 1;
+    $hasEnd = preg_match_all('/DOCUMENT>>>/i', $text, $ends, PREG_OFFSET_CAPTURE) > 0;
+    $endPos = $hasEnd ? array_column($ends[0], 1) : [];
     $lastEnd = $endPos ? $endPos[count($endPos) - 1] : null;
 
-    $hasStart = preg_match($startRe, $text, $sm, PREG_OFFSET_CAPTURE) === 1;
+    $contentStart = null;
+    $contentEnd = strlen($text);
+    $reply = '';
+    $content = null;
 
-    if ($hasStart && (!$endPos || $endPos[0] > $sm[0][1])) {
-        $contentStart = $sm[0][1] + strlen(DOC_START);
-    } elseif ($endPos) {
-        // Block emitted without a start marker: begin at the first '# ' heading before it.
+    if ($hasStart) {
+        $contentStart = $sm[0][1] + strlen($sm[0][0]);
+        // Lewati karakter spasi / newline setelah marker pembuka
+        while (isset($text[$contentStart]) && in_array($text[$contentStart], [" ", "\t", "\r", "\n"], true)) {
+            $contentStart++;
+        }
+        foreach ($endPos as $p) {
+            if ($p >= $contentStart) {
+                $contentEnd = $p;
+                break;
+            }
+        }
+        $reply = trim(substr($text, 0, $sm[0][1]));
+        $content = trim(substr($text, $contentStart, $contentEnd - $contentStart));
+        if ($lastEnd !== null && $lastEnd >= $contentEnd) {
+            $suffix = trim(substr($text, $lastEnd + strlen(DOC_END)));
+            if ($suffix !== '') {
+                $reply = trim($reply . "\n\n" . $suffix);
+            }
+        }
+    } elseif ($hasEnd) {
+        // Blok tanpa marker pembuka: cari heading '# ' pertama sebelum end marker
         $before = substr($text, 0, $endPos[0]);
         if (preg_match('/^# /m', $before, $hm, PREG_OFFSET_CAPTURE)) {
-            $contentStart = $hm[0][1];
+            $reply = trim(substr($before, 0, $hm[0][1]));
+            $content = trim(substr($before, $hm[0][1]));
         } else {
-            $contentStart = 0;
+            $reply = '';
+            $content = trim($before);
         }
     } else {
-        return ['reply' => trim($text), 'content' => null];
-    }
-
-    $contentEnd = strlen($text);
-    foreach ($endPos as $p) {
-        if ($p >= $contentStart) {
-            $contentEnd = $p;
-            break;
+        // FALLBACK ROBUST: Model tidak menuliskan marker <<<DOCUMENT sama sekali.
+        // Cek apakah model menghasilkan dokumen yang dibungkus ```markdown ... ``` atau diawali heading '# '
+        if (preg_match('/```(?:markdown|md)[ \t]*\n(.*?)```/s', $text, $cm, PREG_OFFSET_CAPTURE) && preg_match('/^# /m', $cm[1][0])) {
+            $reply = trim(substr($text, 0, $cm[0][1]));
+            $content = trim($cm[1][0]);
+        } elseif (preg_match('/^# /m', $text, $hm, PREG_OFFSET_CAPTURE)) {
+            $reply = trim(substr($text, 0, $hm[0][1]));
+            $content = trim(substr($text, $hm[0][1]));
+        } else {
+            return ['reply' => trim($text), 'content' => null];
         }
     }
-    $content = trim(substr($text, $contentStart, $contentEnd - $contentStart));
-    if (preg_match('/^```(?:markdown|md)[ \t]*\n(.*)\n```[ \t]*$/s', $content, $cm)) {
-        $content = $cm[1];
-    } elseif (str_starts_with($content, "```\n") && str_ends_with($content, "\n```")) {
-        $content = substr($content, 4, -4);
-    }
-    $content = trim($content);
-    $content = trim(preg_replace('/<!--.*?-->/s', '', $content));
 
-    $suffix = $lastEnd !== null && $lastEnd >= $contentEnd ? substr($text, $lastEnd + strlen(DOC_END)) : '';
-    $reply = trim(preg_replace('/^<<<DOCUMENT[ \t]*$|^DOCUMENT>>>[ \t]*$/m', '', trim(substr($text, 0, $contentStart)) . "\n" . trim($suffix)));
+    if ($content !== null) {
+        // Bersihkan jika content masih terbungkus kode ```markdown ... ```
+        if (preg_match('/^```(?:markdown|md)?[ \t]*\n(.*)\n```[ \t]*$/s', $content, $cm)) {
+            $content = $cm[1];
+        } elseif (str_starts_with($content, "```\n") && str_ends_with($content, "\n```")) {
+            $content = substr($content, 4, -4);
+        }
+        $content = trim($content);
+        $content = trim(preg_replace('/<!--.*?-->/s', '', $content));
+    }
+
+    $reply = trim(preg_replace('/^<<<DOCUMENT[ \t]*$|^DOCUMENT>>>[ \t]*$/mi', '', $reply));
     if ($reply === '') {
         $reply = 'Dokumen sudah diperbarui. Cek preview di sebelah kanan.';
     }
 
-    // Model kadang membalik: ringkasan yang dibungkus marker, dokumennya dibiarkan di luar,
-    // sehingga preview cuma menampilkan paragraf pembuka. Dokumen dikenali dari headingnya,
-    // jadi kalau bagian dalam marker tidak punya heading padahal reply masih menyimpan teks
-    // yang lebih panjang ber-heading, tukar posisinya.
-    if ($content !== '' && !preg_match('/^#{1,2} /m', $content) && preg_match('/^# /m', $reply, $hm, PREG_OFFSET_CAPTURE)) {
+    // Model kadang membalik: ringkasan di dalam marker, dokumen di luar
+    if ($content !== null && $content !== '' && !preg_match('/^#{1,2} /m', $content) && preg_match('/^# /m', $reply, $hm, PREG_OFFSET_CAPTURE)) {
         $moved = trim(substr($reply, $hm[0][1]));
         if (strlen($moved) > strlen($content)) {
             $reply = trim(substr($reply, 0, $hm[0][1]) . "\n\n" . $content);
@@ -477,22 +511,52 @@ function ai_parse(string $text): array
         }
     }
 
-    // Blokir terakhir: isi dalam marker yang sama sekali tidak bergaya dokumen (tanpa heading)
-    // jangan pernah jadi konten — kalau tidak, satu balasan ngawur menimpa dokumen user yang sah.
-    // Teksnya dipindah ke reply saja supaya user tetap melihat apa yang model tulis.
-    if ($content !== '' && !preg_match('/^#{1,2} /m', $content)) {
-        $reply = trim($reply . "\n\n" . $content);
-        return ['reply' => $reply, 'content' => null];
+    // Validasi: konten harus memiliki heading markdown (# atau ##)
+    if ($content !== null) {
+        $content = trim($content);
+        if ($content === '' || !preg_match('/^#{1,2} /m', $content)) {
+            $reply = trim($reply . "\n\n" . $content);
+            return ['reply' => $reply, 'content' => null];
+        }
     }
 
-    return ['reply' => $reply, 'content' => trim($content)];
+    return ['reply' => $reply, 'content' => $content];
 }
 
-function ai_title_from_markdown(string $markdown): ?string
+function ai_title_from_markdown(string $markdown, string $type = ''): ?string
 {
-    if (preg_match('/^#\s+(.+)$/m', $markdown, $m)) {
-        return mb_substr(trim($m[1]), 0, 150);
+    // 1. Khusus PRD: cari nama produk di ## <Nama Produk> atau di tabel metadata
+    if ($type === 'prd' || preg_match('/^#\s+PRODUCT REQUIREMENTS DOCUMENT/mi', $markdown)) {
+        if (preg_match('/^#\s+PRODUCT REQUIREMENTS DOCUMENT[^\n]*\n+##\s+([^\[\n\r]+)/mi', $markdown, $pm)) {
+            $name = trim($pm[1]);
+            if ($name !== '' && !str_contains($name, '{{') && !str_starts_with($name, '[')) {
+                return mb_substr('PRD: ' . $name, 0, 150);
+            }
+        }
+        if (preg_match('/\|\s*\*\*Nama Produk\*\*\s*\|\s*([^\|\n\r]+)\|/i', $markdown, $mm)) {
+            $name = trim($mm[1]);
+            if ($name !== '' && !str_contains($name, '{{') && !str_starts_with($name, '[')) {
+                return mb_substr('PRD: ' . $name, 0, 150);
+            }
+        }
     }
+
+    // 2. Judul dari heading # utama
+    if (preg_match('/^#\s+(.+)$/m', $markdown, $m)) {
+        $h1 = trim($m[1]);
+        if ($h1 !== '' && !str_contains($h1, '{{')) {
+            if (preg_match('/^PRODUCT REQUIREMENTS DOCUMENT/i', $h1)) {
+                if (preg_match('/^##\s+([^\[\n\r]+)/m', $markdown, $m2)) {
+                    $sub = trim($m2[1]);
+                    if ($sub !== '' && !str_contains($sub, '{{') && !str_starts_with($sub, '[')) {
+                        return mb_substr('PRD: ' . $sub, 0, 150);
+                    }
+                }
+            }
+            return mb_substr($h1, 0, 150);
+        }
+    }
+
     return null;
 }
 

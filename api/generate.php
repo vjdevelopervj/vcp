@@ -124,10 +124,19 @@ try {
 
     if ($result['content'] !== null) {
         $title = $doc['title'];
-        if (str_starts_with($title, 'Untitled ')) {
-            $title = ai_title_from_markdown($result['content']) ?? $title;
+        $newTitle = ai_title_from_markdown($result['content'], (string) ($doc['type'] ?? ''));
+        if ($newTitle !== null) {
+            if (
+                str_starts_with($title, 'Untitled ')
+                || str_starts_with($title, 'Ide:')
+                || str_starts_with($title, 'Ide ')
+                || str_starts_with($title, 'Chat baru')
+                || ($doc['type'] === 'prd' && str_starts_with($newTitle, 'PRD: '))
+            ) {
+                $title = $newTitle;
+            }
         }
-        $pdo->prepare('UPDATE documents SET title = ?, content = ? WHERE id = ?')
+        $pdo->prepare('UPDATE documents SET title = ?, content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
             ->execute([$title, $result['content'], $doc['id']]);
     } else {
         $pdo->prepare('UPDATE documents SET updated_at = CURRENT_TIMESTAMP WHERE id = ?')->execute([$doc['id']]);
