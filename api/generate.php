@@ -132,6 +132,8 @@ try {
                 || str_starts_with($title, 'Ide ')
                 || str_starts_with($title, 'Chat baru')
                 || ($doc['type'] === 'prd' && str_starts_with($newTitle, 'PRD: '))
+                || ($doc['type'] === 'design' && str_starts_with($newTitle, 'Design: '))
+                || ($doc['type'] === 'planning' && (str_starts_with($newTitle, 'Plan: ') || str_starts_with($newTitle, 'Project Plan: ')))
             ) {
                 $title = $newTitle;
             }

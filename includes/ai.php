@@ -8,6 +8,13 @@ const MAX_TEXT_PROMPT_CHARS = 12000;
 function ai_system_prompt(string $type): string
 {
     $today = date('d F Y');
+    $metaRule = match ($type) {
+        'planning' => "- Format judul dokumen WAJIB: `# Project Plan: <Nama Proyek>`\n  - Jika pengguna meminta mengubah nama proyek/produk, perbarui judul `# Project Plan: <Nama Proyek>` dan baris `| **Nama Proyek** | <Nama Proyek> |`.",
+        'design' => "- Format judul dokumen WAJIB: `# Design Document: <Nama Produk/Aplikasi>`\n  - Jika pengguna meminta mengubah nama produk/aplikasi, perbarui judul `# Design Document: <Nama Produk/Aplikasi>` dan baris `| **Produk / Aplikasi** | <Nama Produk/Aplikasi> |`.",
+        'prd' => "- Format judul dokumen WAJIB: `# PRODUCT REQUIREMENTS DOCUMENT (PRD)` diikuti subjudul `## <Nama Produk>`\n  - Jika pengguna meminta mengubah nama produk, perbarui subjudul `## <Nama Produk>` dan baris `| **Nama Produk** | <Nama Produk> |`.",
+        default => "- Format judul dokumen WAJIB: `# <Judul Dokumen>`",
+    };
+
     $focus = [
         'planning' => 'a project PLANNING document: overview, goals, scope (in/out), milestones & timeline, task breakdown, team/roles, risks & mitigations, success metrics.',
         'design' => 'a DESIGN document: design principles, user personas, user flows, information architecture, page/screen inventory, UI components, design tokens (colors, typography, spacing), accessibility notes, and technical architecture where relevant.',
@@ -24,12 +31,12 @@ Rules:
 - TABEL METADATA (Nama Produk, Versi, Disusun oleh, Untuk, Tanggal, Dokumen Terkait):
   - Jika pengguna meminta mengubah nama pembuat ('Disusun oleh'), perbarui baris `| **Disusun oleh** | <Nama> |`.
   - Jika pengguna meminta mengubah penerima/klien/tujuan ('Untuk'), perbarui baris `| **Untuk** | <Nama/Agency> |`.
-  - Jika pengguna meminta mengubah nama produk, perbarui judul dokumen `# PRODUCT REQUIREMENTS DOCUMENT (PRD)`, subjudul `## <Nama Produk>`, dan baris `| **Nama Produk** | <Nama Produk> |`.
+  {$metaRule}
   - Jika pengguna meminta tanggal hari ini, tuliskan tanggal hari ini ({$today}) pada baris `| **Tanggal** | {$today} |`.
 - Bahasa user boleh gaul, singkatan, atau campur Inggris. Terjemahkan dulu maksudnya, baru kerjakan. Jangan mengoreksi gaya bahasanya dan jangan menanyakan arti kata gaul.
   Kamus cepat (tulis user → maksud di dokumen): gua/gue/gw/aku → saya · lu/elo → pengguna target · pengen/pingin/mau → ingin · bikin → membuat · gak/ga/ndak/tak → tidak · udah/udh/sdh → sudah · gmn/gimana → bagaimana · bgt/parah → sangat · kek/kyk/kayak → seperti · utk/dpt/skrng/trs → untuk/dapat/sekarang/terus · notif/notip → notifikasi · app → aplikasi · web-an → situs web · cuan → keuntungan · boncos → rugi · ribet → rumit · gak ribet/gampang → sederhana & mudah dipakai · rame → trafik tinggi · lemot → performa lambat · crash/mati → error · login pake google → OAuth Google · dark mode → tema gelap · bisa bayar/checkout → pembayaran in-app · chat kayak WA → pesan instan · tracking lokasi → lokasi real-time · reminder → pengingat · to-do → daftar tugas · wishlist → daftar simpanan · deadline → tenggat · brief/scope → ruang lingkup · review/feedback → masukan · export/share → ekspor & berbagi
   - Kalau prompt user gaul/singkatan/campur Inggris: mulai balasan dengan SATU kalimat "Kupahami: <maksudnya dengan istilah yang benar>", mis. "Kupahami: aplikasi POS untuk warung makan dengan laporan harian." — supaya user langsung tahu terjemahannya benar. Kalau prompt sudah formal dan jelas (mis. daftar "Pilihan platform & teknologi"), kerjakan langsung tanpa kalimat itu.
-  - Prompt pendek/parsial ("app kasir", "bikinin prd dong") TETAP langsung dibuatkan draf dokumennya: pakai konteks yang ada, isi dengan asumsi wajar dan rekomendasikan yang terbaik di dalam dokumen. Khusus dokumen PRD, sertakan pertanyaan di balasan chat (nama produk dan preferensi tech stack) agar user bisa mengetik langsung keputusannya.
+  - Prompt pendek/parsial ("app kasir", "bikinin design app", "buatkan planning") TETAP langsung dibuatkan draf dokumennya: pakai konteks yang ada, isi dengan asumsi wajar dan rekomendasikan yang terbaik di dalam dokumen.
   - Minta klarifikasi hanya kalau maksudnya benar-benar tidak bisa ditebak (mis. tidak jelas dokumen apa yang diminta).
   - Nada balasan chat boleh santai mengikuti gaya user, tetap sopan dan ringkas. ISI DOKUMEN selalu bahasa Indonesia formal: istilah gaul diganti istilah teknis yang tepat — termasuk di dalam sel tabel, judul, dan glosarium (mis. sel "Gua/Pemilik Warung" ditulis "Pemilik warung"). Kutipan ucapan user pun ditulis ulang formal: jangan menulis aplikasi "lebih gak ribet", tulis aplikasi "lebih sederhana". Dokumen yang masih memuat satu saja kata gaul dari kamus di atas harus ditulis ulang dengan istilah formal sebelum dikirim.
 - Always respond in exactly two parts:
@@ -95,6 +102,10 @@ Untuk dokumen PRD, struktur dokumen WAJIB mengikuti template di bawah ini secara
    - Jika pengguna belum menentukan tech stack, ajukan pertanyaan terbuka di balasan percakapan (BUKAN pilihan ganda, tombol, atau chip) agar pengguna dapat mengetik langsung pilihannya.
    - Contoh pertanyaan: "Untuk teknologinya, apakah kamu punya preferensi bahasa pemrograman, frontend, backend, atau database tertentu? Atau mau saya bantu pilihkan stack yang paling pas?"
    - Jika pengguna SUDAH menyebutkan nama produk dan/atau tech stack, konfirmasikan pilihannya dan jangan menanyakan ulang apa yang sudah dijawab.
+3. TETAP WAJIB MENYERTAKAN DRAF DOKUMEN LENGKAP:
+   - Meskipun kamu menanyakan nama produk atau tech stack di balasan percakapan, kamu TETAP WAJIB LANGSUNG MENULISKAN DRAF DOKUMEN PRD LENGKAP (14 Bab) di antara `<<<DOCUMENT` dan `DOCUMENT>>>`.
+   - Gunakan nama kerja sementara di subjudul (misal `## [Nama Produk: Platform Thrift (Menunggu Konfirmasi)]`) dan rekomendasikan stack terbaik di Bab 14.
+   - DILARANG KERAS hanya membalas dengan pesan chat tanpa menyertakan blok dokumen lengkap!
 
 ### ATURAN WAJIB DOKUMEN PRD:
 1. NAMA PRODUK DI DOKUMEN:
@@ -119,29 +130,72 @@ Untuk dokumen PRD, struktur dokumen WAJIB mengikuti template di bawah ini secara
 PROMPT;
     }
 
-    if ($type === 'design' && is_readable(__DIR__ . '/../template/UIUX_TECHNICAL_DICTIONARY.md')) {
-        $dictionary = file_get_contents(__DIR__ . '/../template/UIUX_TECHNICAL_DICTIONARY.md');
+    if ($type === 'design' && is_readable(__DIR__ . '/../template/TEMPLATE_DESIGN.md')) {
+        $designTemplate = file_get_contents(__DIR__ . '/../template/TEMPLATE_DESIGN.md');
+        $dictionary = is_readable(__DIR__ . '/../template/UIUX_TECHNICAL_DICTIONARY.md')
+            ? file_get_contents(__DIR__ . '/../template/UIUX_TECHNICAL_DICTIONARY.md')
+            : '';
+
         $base .= <<<PROMPT
 
 
-## REFERENSI GAMBAR UI (Khusus dokumen Design)
-Dokumen Design yang bagus berangkat dari referensi visual nyata, bukan asumsi. Aturannya:
+## DESIGN DOCUMENT TEMPLATE (WAJIB DIIKUTI SECARA PERSIS)
+Untuk dokumen Design, struktur dokumen WAJIB mengikuti template di bawah ini secara persis:
+- Judul dokumen WAJIB diawali `# Design Document: <Nama Produk/Aplikasi>`.
+- DILARANG KERAS menamai dokumen ini sebagai PRD atau Product Requirements Document!
+- Bab dan penomoran harus sesuai template, format tabel sama, placeholder {{...}} diisi dari percakapan.
+- Komentar HTML <!-- ... --> di template hanyalah panduan untukmu dan TIDAK boleh muncul di output.
 
-1. Kalau user belum mengirim gambar referensi sama sekali (tidak di pesan ini, tidak di riwayat), balasan pertamamu WAJIB memintanya: 1-3 tangkapan layar UI yang jadi acuan — misalnya screenshot aplikasi sejenis, shot Dribbble/Behance, atau halaman design system. Sebutkan bahwa gambar itu akan dianalisis lalu disematkan langsung ke dalam dokumen. Tetap susun draf dokumen dari informasi yang sudah ada, dan tandai bagian visual yang masih menunggu referensi dengan "(menunggu referensi gambar)".
-2. Begitu ada gambar dikirim, SEMUA gambar wajib disisipkan di dokumen, pada sub-bab `## Referensi Visual` di bagian awal (tepat setelah judul dan baris meta), satu sub-sub-bab per gambar:
+### REFERENSI GAMBAR UI (Khusus dokumen Design)
+1. Kalau user belum mengirim gambar referensi sama sekali (tidak di pesan ini, tidak di riwayat), balasan percakapan pertamamu WAJIB memintanya: 1-3 tangkapan layar UI yang jadi acuan (screenshot aplikasi sejenis, shot Dribbble/Behance, atau design system).
+   - Di dalam dokumen pada sub-bab `## Referensi Visual`, tuliskan: `*(Menunggu referensi gambar — lampirkan 1-3 screenshot inspirasi UI lewat ikon penjepit agar token visual diselaraskan).*`
+2. Begitu ada gambar dikirim, SEMUA gambar wajib disisipkan di dokumen, pada sub-bab `## Referensi Visual` di bagian awal (tepat setelah judul dan tabel meta), satu sub-sub-bab per gambar:
    ### Referensi 1 — <nama singkat>
    ![<alt text deskriptif>](<url>)
    Lanjutkan dengan analisis berformat: **Design language** (istilah dari kamus: glassmorphism, bento grid, neubrutalism, dll.), **Palet terdeteksi** (tabel hex + porsi pixel), **Tipografi**, **Spacing & radius**, **Elevation & border**, lalu **Diadopsi ke dokumen ini** (keputusan konkret: nilai hex untuk token warna, px untuk spacing/radius, nama komponen yang dipakai).
 3. Salin URL gambar PERSIS seperti yang diberikan (contoh: uploads/3/a1b2c3...webp) ke dalam markdown `![]()`. Jangan mengubah, menyingkat, atau menggabungkan URL.
-4. Kamu TIDAK bisa melihat isi gambar. Data visual yang kamu miliki hanya hasil ekstraksi pixel yang kusertakan (dimensi, rasio, tone gelap/terang, palet hex beserta porsi, warna aksen paling saturasi) ditambah deskripsi user. DILARANG mengarang detail yang tidak ada di data itu. Kalau ada yang dibutuhkan tapi tidak ada di data, tanyakan ke user.
+4. Kamu TIDAK bisa melihat isi gambar. Data visual yang kamu miliki hanya hasil ekstraksi pixel yang kusertakan (dimensi, rasio, tone gelap/terang, palet hex beserta porsi, warna aksen paling saturasi) ditambah deskripsi user.
 5. Saat merevisi dokumen, sub-bab Referensi Visual beserta gambar-gambarnya tidak boleh hilang, berubah urutan, atau berubah URL kecuali user memintanya.
 
-## UI/UX TECHNICAL DICTIONARY (WAJIB DIPAKAI)
-Untuk dokumen Design, gunakan vocabulary dari kamus di bawah ini: sebut hex code spesifik (bukan "biru muda"), nilai spacing numerik dan token (8px grid, md/lg/xl), nama design language yang tepat (glassmorphism, bento grid, dsb.), istilah komponen/state/motion/a11y yang benar. Jangan menggambarkan visual secara kabur.
+### ATURAN WAJIB DOKUMEN DESIGN:
+1. Format Judul: `# Design Document: <Nama Produk/Aplikasi>`
+2. Alur Pengguna (Bab 3): Wajib sertakan langkah interaksi dan PERSIS SATU diagram ```mermaid flowchart TD alur interaksi layar aplikasi. Baris pertama `flowchart TD`. Setiap label node dan label panah WAJIB diapit tanda kutip ganda: A["Buka Aplikasi"] --> B["Dashboard"].
+3. Inventaris Layar (Bab 4) & Komponen UI (Bab 5): Jabarkan seluruh layar utama aplikasi serta komponen navigasi, formulir, modal, dan state (hover, active, disabled, loading).
+4. Design Tokens (Bab 6): Tuliskan palet warna dengan kode HEX spesifik (contoh: `#090D16`, `#10B981`, dsb.), tipografi, dan skala spacing/radius. Gunakan istilah baku dari UI/UX Technical Dictionary.
 
-=== DICTIONARY (MULAI) ===
+=== TEMPLATE DESIGN (MULAI) ===
+{$designTemplate}
+=== TEMPLATE DESIGN (SELESAI) ===
+
+=== UI/UX TECHNICAL DICTIONARY ===
 {$dictionary}
-=== DICTIONARY (SELESAI) ===
+=== SELESAI DICTIONARY ===
+PROMPT;
+    }
+
+    if ($type === 'planning' && is_readable(__DIR__ . '/../template/TEMPLATE_PLANNING.md')) {
+        $planningTemplate = file_get_contents(__DIR__ . '/../template/TEMPLATE_PLANNING.md');
+
+        $base .= <<<PROMPT
+
+
+## PROJECT PLAN TEMPLATE (WAJIB DIIKUTI SECARA PERSIS)
+Untuk dokumen Planning, struktur dokumen WAJIB mengikuti template di bawah ini secara persis:
+- Judul dokumen WAJIB diawali `# Project Plan: <Nama Proyek>`.
+- DILARANG KERAS menamai dokumen ini sebagai PRD atau Design Document!
+- Bab dan penomoran harus sesuai template, format tabel sama, placeholder {{...}} diisi dari percakapan.
+- Komentar HTML <!-- ... --> di template hanyalah panduan untukmu dan TIDAK boleh muncul di output.
+
+### ATURAN WAJIB DOKUMEN PLANNING:
+1. Format Judul: `# Project Plan: <Nama Proyek>`
+2. Ruang Lingkup (Bab 3): Sajikan tabel In-Scope (Fitur MVP yang wajib selesai) vs Out-of-Scope (Fitur fase lanjutan/ditunda) secara tegas.
+3. Linimasa & Tonggak Pencapaian (Bab 4): Wajib sertakan tabel milestone dengan estimasi durasi dan target waktu, serta PERSIS SATU diagram ```mermaid flowchart LR alur fase proyek dari Fase 1 hingga Peluncuran. Setiap label node WAJIB diapit tanda kutip ganda.
+4. Rincian Pekerjaan / WBS (Bab 5): Wajib memakai checklist markdown `- [ ]` untuk setiap butir tugas per fase kerja (Discovery, Desain UI/UX, Development, QA, Deployment).
+5. Alokasi Tim & Manajemen Risiko (Bab 6 & 7): Cantumkan tabel peran tim (PIC) dan tabel mitigasi risiko proyek.
+
+=== TEMPLATE PLANNING (MULAI) ===
+{$planningTemplate}
+=== TEMPLATE PLANNING (SELESAI) ===
 PROMPT;
     }
 
@@ -346,39 +400,50 @@ function ai_complete(array $messages): string
     $error = '';
     $errno = 0;
 
-    $ch = curl_init(rtrim(AI_BASE_URL, '/') . '/chat/completions');
-    $opts = [
-        CURLOPT_POST => true,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_CONNECTTIMEOUT => 5,
-        CURLOPT_TIMEOUT => $effectiveTimeout,
-        CURLOPT_HTTPHEADER => [
-            'Content-Type: application/json',
-            'Authorization: Bearer ' . AI_API_KEY,
-        ],
-        CURLOPT_POSTFIELDS => json_encode($payload),
-    ];
-    if (defined('AI_SSL_VERIFY') && !AI_SSL_VERIFY) {
-        $opts[CURLOPT_SSL_VERIFYPEER] = false;
-        $opts[CURLOPT_SSL_VERIFYHOST] = 0;
-    }
-    curl_setopt_array($ch, $opts);
-    $raw = curl_exec($ch);
-    $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $error = curl_error($ch);
-    $errno = curl_errno($ch);
-    curl_close($ch);
-
-    // Fallback jika sertifikat CA lokal di server hosting bermasalah (error 60 / 77)
-    if ($raw === false && ($errno === 60 || $errno === 77)) {
+    $maxAttempts = 2;
+    for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
         $ch = curl_init(rtrim(AI_BASE_URL, '/') . '/chat/completions');
-        $opts[CURLOPT_SSL_VERIFYPEER] = false;
-        $opts[CURLOPT_SSL_VERIFYHOST] = 0;
+        $opts = [
+            CURLOPT_POST => true,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT => $effectiveTimeout,
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json',
+                'Authorization: Bearer ' . AI_API_KEY,
+            ],
+            CURLOPT_POSTFIELDS => json_encode($payload),
+        ];
+        if (defined('AI_SSL_VERIFY') && !AI_SSL_VERIFY) {
+            $opts[CURLOPT_SSL_VERIFYPEER] = false;
+            $opts[CURLOPT_SSL_VERIFYHOST] = 0;
+        }
         curl_setopt_array($ch, $opts);
         $raw = curl_exec($ch);
         $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $error = curl_error($ch);
+        $errno = curl_errno($ch);
         curl_close($ch);
+
+        // Fallback jika sertifikat CA lokal di server hosting bermasalah (error 60 / 77)
+        if ($raw === false && ($errno === 60 || $errno === 77)) {
+            $ch = curl_init(rtrim(AI_BASE_URL, '/') . '/chat/completions');
+            $opts[CURLOPT_SSL_VERIFYPEER] = false;
+            $opts[CURLOPT_SSL_VERIFYHOST] = 0;
+            curl_setopt_array($ch, $opts);
+            $raw = curl_exec($ch);
+            $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $error = curl_error($ch);
+            curl_close($ch);
+        }
+
+        if ($raw !== false && $status < 500) {
+            break;
+        }
+
+        if ($attempt < $maxAttempts) {
+            sleep(1);
+        }
     }
 
     if ($raw === false) {
@@ -565,7 +630,39 @@ function ai_title_from_markdown(string $markdown, string $type = ''): ?string
         }
     }
 
-    // 2. Judul dari heading # utama
+    // 2. Khusus Design
+    if ($type === 'design' || preg_match('/^#\s+Design Document/mi', $markdown)) {
+        if (preg_match('/^#\s+(?:Design Document|Desain Antarmuka|Design):\s*([^\[\n\r]+)/mi', $markdown, $dm)) {
+            $name = trim($dm[1]);
+            if ($name !== '' && !str_contains($name, '{{') && !str_starts_with($name, '[')) {
+                return mb_substr('Design: ' . $name, 0, 150);
+            }
+        }
+        if (preg_match('/\|\s*\*\*(?:Produk \/ Aplikasi|Nama Produk|Nama Aplikasi|Produk)\*\*\s*\|\s*([^\|\n\r]+)\|/i', $markdown, $mm)) {
+            $name = trim($mm[1]);
+            if ($name !== '' && !str_contains($name, '{{') && !str_starts_with($name, '[')) {
+                return mb_substr('Design: ' . $name, 0, 150);
+            }
+        }
+    }
+
+    // 3. Khusus Planning
+    if ($type === 'planning' || preg_match('/^#\s+Project Plan/mi', $markdown)) {
+        if (preg_match('/^#\s+(?:Project Plan|Planning|Rencana Proyek):\s*([^\[\n\r]+)/mi', $markdown, $pm)) {
+            $name = trim($pm[1]);
+            if ($name !== '' && !str_contains($name, '{{') && !str_starts_with($name, '[')) {
+                return mb_substr('Plan: ' . $name, 0, 150);
+            }
+        }
+        if (preg_match('/\|\s*\*\*(?:Nama Proyek|Proyek|Nama Produk)\*\*\s*\|\s*([^\|\n\r]+)\|/i', $markdown, $mm)) {
+            $name = trim($mm[1]);
+            if ($name !== '' && !str_contains($name, '{{') && !str_starts_with($name, '[')) {
+                return mb_substr('Plan: ' . $name, 0, 150);
+            }
+        }
+    }
+
+    // 4. Judul dari heading # utama fallback
     if (preg_match('/^#\s+(.+)$/m', $markdown, $m)) {
         $h1 = trim($m[1]);
         if ($h1 !== '' && !str_contains($h1, '{{')) {

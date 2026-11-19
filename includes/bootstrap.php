@@ -2,6 +2,19 @@
 
 require_once __DIR__ . '/../config.php';
 
+if (!function_exists('mb_substr')) {
+    function mb_substr(string $string, int $start, ?int $length = null, ?string $encoding = null): string
+    {
+        return $length === null ? substr($string, $start) : substr($string, $start, $length);
+    }
+}
+if (!function_exists('mb_strlen')) {
+    function mb_strlen(string $string, ?string $encoding = null): int
+    {
+        return strlen($string);
+    }
+}
+
 $forwardedProto = strtolower(trim(explode(',', (string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''))[0]));
 $isHttps = $forwardedProto === 'https'
     || (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
